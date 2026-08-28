@@ -20,25 +20,24 @@ worksets = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorks
 
 # Dicionário de sufixos de worksets por categoria
 workset_suffix_map = {
-    BuiltInCategory.OST_PlumbingFixtures: "Plumbing Fixture",
-    BuiltInCategory.OST_Ceilings: "Ceilings",
-    BuiltInCategory.OST_SpecialityEquipment: "Ceilings",
-    BuiltInCategory.OST_Doors: "Doors and Openings",
-    BuiltInCategory.OST_Windows: "Doors and Openings",
-    BuiltInCategory.OST_ElectricalFixtures: "Small Power",
-    BuiltInCategory.OST_Floors: "Floors",
-    BuiltInCategory.OST_Furniture: "Furniture + Equipment",
-    BuiltInCategory.OST_Casework: "Joinery",  # padrão
-    BuiltInCategory.OST_Levels: "Shared Levels + Grids",
-    BuiltInCategory.OST_Grids: "Shared Levels + Grids",
-    BuiltInCategory.OST_Rooms: "Rooms&Areas",
-    BuiltInCategory.OST_Areas: "Rooms&Areas",
-    BuiltInCategory.OST_CLines: "Groups (temp)",
-    BuiltInCategory.OST_IOSModelGroups: "Groups (temp)"
+    BuiltInCategory.OST_PlumbingFixtures: "PLUMBING FIXTURES",
+    BuiltInCategory.OST_Ceilings: "CEILINGS",
+    BuiltInCategory.OST_SpecialityEquipment: "CEILINGS",
+    BuiltInCategory.OST_Doors: "DOORS",
+    BuiltInCategory.OST_Floors: "FLOORS",
+    BuiltInCategory.OST_Furniture: "FURNITURE",
+    BuiltInCategory.OST_LightingFixtures: "LIGHTING FIXTURES",
+    BuiltInCategory.OST_ElectricalEquipment: "EQUIPMENT",
+    BuiltInCategory.OST_ElectricalFixtures: "ELECTRICAL",
+    BuiltInCategory.OST_Casework: "CASEWORK",  # padrão
+    BuiltInCategory.OST_Levels: "GRIDS & LEVELS",
+    BuiltInCategory.OST_Grids: "GRIDS & LEVELS",
+    BuiltInCategory.OST_Rooms: "ROOMS & AREAS",
+    BuiltInCategory.OST_Areas: "ROOMS & AREAS",
+    BuiltInCategory.OST_RoomSeparationLines: "ROOMS & AREAS",
+    BuiltInCategory.OST_Walls: "WALLS",
+    BuiltInCategory.OST_Planting: "PLANTING"
 }
-
-# Adiciona manualmente a exceção para Placeholder MEP
-special_suffix = "Placeholder MEP"
 
 # Procura os worksets desejados usando sufixo
 target_worksets = {}
@@ -54,18 +53,6 @@ for cat, ws_suffix in workset_suffix_map.items():
             break
     if not found and ws_suffix not in missing_worksets:
         missing_worksets.append(ws_suffix)
-
-# Tenta localizar o Placeholder MEP
-placeholder_ws = None
-for workset in worksets:
-    if workset.Name.strip().endswith(special_suffix):
-        placeholder_ws = workset
-        break
-if not placeholder_ws:
-    missing_worksets.append(special_suffix)
-
-# Prefixos (em MAIÚSCULAS porque vamos comparar com name_upper)
-SHAFTS_PREFIXES   = ("H+A_TEC", "H+A_MechanicalEquipment")
 
 # Inicia a transação
 t = Transaction(doc, "Move elements to correct workset")
@@ -90,20 +77,10 @@ try:
             if param and not param.IsReadOnly:
                 target_ws = default_ws
 
-                # Regras especiais para Casework com prefixo H+A_TEC
-                if cat == BuiltInCategory.OST_Casework and placeholder_ws:
-                    type_id = el.GetTypeId()
-                    type_elem = doc.GetElement(type_id)
-                    if type_elem:
-                        try:
-                            family = type_elem.Family
-                            if family and family.Name.startswith(SHAFTS_PREFIXES):
-                                target_ws = placeholder_ws
-                        except:
-                            pass
-
-                param.Set(target_ws.Id.IntegerValue)
-                count += 1
+                # Só altera se estiver no workset errado
+                if el.WorksetId != target_ws.Id:
+                    param.Set(target_ws.Id.IntegerValue)
+                    count += 1
 
     t.Commit()
 
